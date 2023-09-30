@@ -1,0 +1,106 @@
+import pygame
+import numpy as np
+import sys
+# Define the states
+DEAD = 0
+LIVE = 1
+MIDDLE = 2
+
+# Define the colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+GREY = (128, 128, 128)
+
+# Initialize the grid
+grid = np.zeros((100, 100), dtype=int)
+
+def count_neighbors(grid, row, col):
+    live_neighbors = 0
+    middle_neighbors = 0
+    dead_neighbors = 0
+    for i in range(-1, 2):
+        for j in range(-1, 2):
+            if i == 0 and j == 0:
+                continue
+            if (row + i < 0 or row + i >= grid.shape[0] or 
+                col + j < 0 or col + j >= grid.shape[1]):
+                continue
+            if grid[row + i][col + j] == LIVE:
+                live_neighbors += 1
+            elif grid[row + i][col + j] == MIDDLE:
+                middle_neighbors += 1
+            elif grid[row + i][col + j] == DEAD:
+                dead_neighbors += 1
+    return live_neighbors, middle_neighbors, dead_neighbors
+
+def update_grid(grid):
+    new_grid = grid.copy()
+    for i in range(grid.shape[0]):
+        for j in range(grid.shape[1]):
+            live_neighbors, middle_neighbors, dead_neighbors = count_neighbors(grid, i, j)
+            if grid[i][j] == LIVE:
+                if live_neighbors == 1 or dead_neighbors == 2:
+                    new_grid[i][j] = DEAD
+                elif middle_neighbors == 4:
+                    new_grid[i][j] = LIVE
+            elif grid[i][j] == DEAD:
+                if (live_neighbors + middle_neighbors) == 4:
+                    new_grid[i][j] = LIVE if live_neighbors > middle_neighbors else MIDDLE
+                elif (live_neighbors + middle_neighbors) <3 or (live_neighbors + middle_neighbors) >5:
+                    new_grid[i][j] = DEAD
+            elif grid[i][j] == MIDDLE:
+                if middle_neighbors == 3 or live_neighbors == 4:
+                    new_grid[i][j] = MIDDLE
+                elif dead_neighbors == 3:
+                    new_grid[i][j] = DEAD
+    return new_grid
+
+# Initialize Pygame
+pygame.init()
+
+# Set up some constants
+WIDTH, HEIGHT = 800, 800
+CELL_SIZE = WIDTH // grid.shape[0]
+
+# Create the screen object
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+
+# Game state variable
+running_simulation = False
+
+# Run the cellular automata for a number of steps
+while True:
+    # Event handling
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            x, y = pygame.mouse.get_pos()
+            i, j = x // CELL_SIZE, y // CELL_SIZE
+            if event.button == pygame.BUTTON_LEFT:
+                grid[i][j] = MIDDLE
+            elif event.button == pygame.BUTTON_RIGHT:
+                grid[i][j] = LIVE
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_a:
+                running_simulation = not running_simulation
+            elif event.key == pygame.K_d:
+                x, y = pygame.mouse.get_pos()
+                i, j = x // CELL_SIZE, y // CELL_SIZE
+                grid[i][j] = DEAD
+
+    # Update the grid if the simulation is running
+    if running_simulation:
+        grid = update_grid(grid)
+
+    # Draw the cells on the screen without lines between them.
+# Draw the cells without grid lines
+    for i in range(grid.shape[0]):
+        for j in range(grid.shape[1]):
+            color = WHITE if grid[i][j] == DEAD else BLACK if grid[i][j] == LIVE else GREY
+            pygame.draw.rect(screen, color, (i * CELL_SIZE, j * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+
+    # Update the display and delay to control the speed of the simulation.
+    pygame.display.flip()
+    pygame.time.delay(100)
